@@ -1,7 +1,8 @@
 import { useState, useContext } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import LoginStatusContextClassifyt from "../contexts/LoginStatusContextClassifyt.js";
-import { useNavigate } from "react-router";
+import LoginUsersId from "../contexts/LoginUsersId.js";
+import { Link, useNavigate } from "react-router";
 
 export default function RegisterClassifyt() {
 
@@ -11,6 +12,7 @@ export default function RegisterClassifyt() {
     const [repeatPassword, setRepeatPassword] = useState("");
 
     const [loginStatus, setLoginStatus] = useContext(LoginStatusContextClassifyt);
+    const [loginId, setLoginId] = useContext(LoginUsersId);
     const navigate = useNavigate();
 
     function handleRegisterSubmit(e) {
@@ -36,41 +38,82 @@ export default function RegisterClassifyt() {
         fetch("https://cs571api.cs.wisc.edu/rest/su25/bucket/users", {
             headers: {
                 "X-CS571-ID": CS571.getBadgerId()
-            }
+            },
         })
         .then(res => res.json())
         .then(data => {
+            setLoginId({ loginId: data.id });
+            sessionStorage.setItem("loginId", JSON.stringify({ loginId: data.id }));
 
-            const users = Object.values(data.result || {});
+            const users = Object.values(data.results || {});
 
             if (users.some(u => u.username === trimmedUn)) {
                 alert("That username has already been taken!");
                 return;
             }
-
-            // if un not taken, make acc w a POST
-            fetch("https://cs571api.cs.wisc.edu/rest/su25/bucket/users", {
+            
+            // here, we're gonna create the directory that will store the user's name and data not related to login
+            // then, the id we get from that response will be stored in the main bucket/users collection
+            // --------------------------------------------------------------------------------------------------
+            // the point of this is that we don't have to grab all the data from a given user everytime we want to
+            // a) create a new account
+            // b) log someone in
+            fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/${trimmedUn}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     "X-CS571-ID": CS571.getBadgerId()
                 },
-                // we'll add more criteria later w a PUT
                 body: JSON.stringify({
-                    status: "online",
-                    username: trimmedUn,
-                    pin: password
+                    Id: "",
+                    Firstname: "",
+                    Lastname: ""
                 })
-            })
-            .then(postRes => postRes.json())
-            .then(postData => {
+            }).then(postRes => postRes.json()).then(postData => {
+                // ^ postData.id is the id associated with the /username entry just POSTed ^
                 if (postData.id) {
-                    alert("Your registration has been successful!");
-                    const newLogin = { username: trimmedUn, id: postData.id };
-                    setIsLoggedIn(true);
-                    setLoginStatus(newLogin);
-                    sessionStorage.setItem("loginStatus", JSON.stringify(newLogin));
-                    navigate("/getting-started");
+
+                    // if un not taken, make acc w a POST
+                    fetch("https://cs571api.cs.wisc.edu/rest/su25/bucket/users", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CS571-ID": CS571.getBadgerId()
+                        },
+                        // we'll add more criteria later w a PUT
+                        body: JSON.stringify({
+                            username: trimmedUn,
+                            password: password, 
+                            id: postData.id
+                        })
+                    })
+                    .then(postRes2 => postRes2.json())
+                    .then(postData2 => {
+                        if (postData2.id) {
+                            alert("Your registration has been successful!");
+
+                            const newLoginStatus = {
+                                username: trimmedUn,
+                                usernameId: postData.id // use the actual id returned from the personal bucket POST
+                            };
+                            const newLoginId = {
+                                loginId: postData2.id // use the id returned from the POST to bucket/users
+                            };
+
+                            setLoginStatus(newLoginStatus);
+                            setLoginId(newLoginId);
+                            console.log(newLoginStatus, "username, usernameId");
+                            console.log(newLoginId, "loginId");
+
+                            sessionStorage.setItem("loginStatus", JSON.stringify(newLoginStatus));
+                            sessionStorage.setItem("loginId", JSON.stringify(newLoginId));
+
+                            navigate("/getting-started");
+
+                        } else {
+                            alert("Something went wrong while registering.");
+                        }
+                    })
                 } else {
                     alert("Something went wrong while registering.");
                 }

@@ -1,10 +1,13 @@
 import { useContext, useEffect, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import LoginStatusContextClassifyt from "../contexts/LoginStatusContextClassifyt";
+import { useNavigate } from "react-router";
+import LoginUsersId from "../contexts/LoginUsersId";
 
 export default function PostRegistration() {
 
     const [loginStatus, setLoginStatus] = useContext(LoginStatusContextClassifyt);
+    const [loginId, setLoginId] = useContext(LoginUsersId);
 
     const [firstname, setFirstname] = useState("");
     const [lastname, setLastname] = useState("");
@@ -19,8 +22,13 @@ export default function PostRegistration() {
     const [firstnameStatus, setFirstnameStatus] = useState(true);
     const [lastnameStatus, setLastnameStatus] = useState(true);
 
+    const navigate = useNavigate();
+
     useEffect(() => {
-        if (!loginStatus?.id || (!statusOne && !statusTwo)) return;
+        if (!loginId?.loginId || (statusOne && statusTwo)) {
+            navigate("/");
+            return;
+        };
 
         fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/users`, {
             headers: {
@@ -30,14 +38,15 @@ export default function PostRegistration() {
         })
         .then(res => res.json())
         .then(data => {
-            const og = data.result[loginStatus.id];
+            const og = data.results[loginId.loginId];
             if (!og) {
                 alert("Failed to find account");
                 return;
             }
 
             const updatedUser = {
-                ...og,
+                // we never had the chance to put the id to the user in /users, so we do so now
+                Id: loginId.loginId,
                 Firstname: firstname,
                 Lastname: lastname,
                 Age: age
@@ -48,7 +57,7 @@ export default function PostRegistration() {
                 updatedUser.Weight = weight;
             }
 
-            return fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/users?id=${loginStatus.id}`, {
+            return fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/${loginStatus.username}?id=${loginStatus.usernameId}`, {
                 method: 'PUT',
                 headers: {
                     "X-CS571-ID": CS571.getBadgerId(),

@@ -7,6 +7,7 @@ import white from '../../classifyt white.png';
 import { useEffect, useState } from "react";
 
 import { FaUserCircle } from 'react-icons/fa'; 
+import LoginUsersId from "../contexts/LoginUsersId";
 
 // hw6 was very helpful in the structuring of this website, even down to folder location of certain elements
 
@@ -14,6 +15,11 @@ export default function LayoutClassifyt(props) {
 
     const [loginStatus, setLoginStatus] = useState(() => {
         const stored = sessionStorage.getItem("loginStatus");
+        return stored ? JSON.parse(stored) : undefined;
+    })
+
+    const [loginId, setLoginId] = useState(() => {
+        const stored = sessionStorage.getItem("loginId");
         return stored ? JSON.parse(stored) : undefined;
     })
 
@@ -103,7 +109,9 @@ export default function LayoutClassifyt(props) {
         }
         <div style={{ margin: "1rem" }}>
             <LoginStatusContextClassifyt.Provider value={[loginStatus, setLoginStatus]}>
-                <Outlet />
+                <LoginUsersId.Provider value={[loginId, setLoginId]}>
+                    <Outlet />
+                </LoginUsersId.Provider>
             </LoginStatusContextClassifyt.Provider>
         </div>
         </>
