@@ -1,12 +1,14 @@
 import { useContext, useEffect, useState } from "react";
 import { Button, ButtonGroup, Card, Col, Container, Dropdown, Form, Row } from "react-bootstrap";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import LoginStatusContextClassifyt from "../contexts/LoginStatusContextClassifyt";
 import LoginUsersId from "../contexts/LoginUsersId";
+import PlanSetup from '../contexts/PlanSetup';
 
 export default function AccountDetails() {
     const [loginStatus] = useContext(LoginStatusContextClassifyt);
     const [loginId] = useContext(LoginUsersId);
+    const [planSetup, setPlanSetup] = useContext(PlanSetup);
 
     const [editMode, setEditMode] = useState(false);
     const [activeTab, setActiveTab] = useState("account"); 
@@ -19,6 +21,8 @@ export default function AccountDetails() {
         Height: "",
         Weight: ""
     });
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (loginStatus?.username && loginStatus?.usernameId) {
@@ -44,6 +48,9 @@ export default function AccountDetails() {
         }
     }, [loginStatus]);
 
+    /**
+     * Function used to save the updated user data to the user's api.
+     */
     function onSave() {
         setEditMode(false);
 
@@ -139,7 +146,23 @@ export default function AccountDetails() {
                                 )
                             ) : (
                                 <>
-                                    <p>Personal plan details will go here.</p>
+                                    {planSetup === undefined ? (
+                                        <div className="text-center">
+                                            <p>You haven't finished setting up your plan yet!</p>
+                                            <Button variant="primary" onClick={() => navigate("/plan-setup")}>Continue Plan Setup</Button>
+                                        </div>
+                                    ) : (
+                                        <Row className="text-center">
+                                            <Col xs={12} md={6} className="mb-3">
+                                                <p>View your Personal Plan here!</p>
+                                                <Button variant="success" onClick={() => navigate("/personal-plan")}>View Plan</Button>
+                                            </Col>
+                                            <Col xs={12} md={6} className="mb-3">
+                                                <p>Edit your plan details here.</p>
+                                                <Button onClick={() => navigate("/plan-setup")}>Edit Plan</Button>
+                                            </Col>
+                                        </Row>
+                                    )}
                                 </>
                             )}
                         </Card.Body>

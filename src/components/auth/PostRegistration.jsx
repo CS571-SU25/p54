@@ -24,59 +24,6 @@ export default function PostRegistration() {
 
     const navigate = useNavigate();
 
-    useEffect(() => {
-        if (!loginId?.loginId || (statusOne && statusTwo)) {
-            navigate("/");
-            return;
-        };
-
-        fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/users`, {
-            headers: {
-                "X-CS571-ID": CS571.getBadgerId()
-            },
-            credentials: "include"
-        })
-        .then(res => res.json())
-        .then(data => {
-            const og = data.results[loginId.loginId];
-            if (!og) {
-                alert("Failed to find account");
-                return;
-            }
-
-            const updatedUser = {
-                // we never had the chance to put the id to the user in /users, so we do so now
-                Id: loginId.loginId,
-                Firstname: firstname,
-                Lastname: lastname,
-                Age: age
-            };
-
-            if (statusTwo) {
-                updatedUser.Height = height;
-                updatedUser.Weight = weight;
-            }
-
-            return fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/${loginStatus.username}?id=${loginStatus.usernameId}`, {
-                method: 'PUT',
-                headers: {
-                    "X-CS571-ID": CS571.getBadgerId(),
-                    "Content-Type": "application/json"
-                },
-                credentials: "include",
-                body: JSON.stringify(updatedUser)
-            });
-        })
-        .then(res => {
-            if (res?.ok) {
-                console.log("User successfully updated.");
-            } else {
-                alert("Something went wrong while updating your profile.");
-            }
-        });
-    }, [statusOne, statusTwo]);
-
-
     function handleFirstnameInput(name) {
         setFirstname(name);
         if (name.length <= 20 && /^[A-Za-z\s]*$/.test(name)) {
@@ -95,17 +42,96 @@ export default function PostRegistration() {
         }
     }
 
-    function handleStatusOne() {
+    // updates after status one (fname, lname, age) are set
+    async function handleStatusOne() {
         if (firstnameStatus && lastnameStatus && firstname && lastname) {
-            setStatusOne(true);
+            try {
+                const updatedUser = {
+                    Id: loginId.loginId,
+                    Firstname: firstname,
+                    Lastname: lastname,
+                    Age: age
+                };
+
+                const res = await fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/${loginStatus.username}?id=${loginStatus.usernameId}`, {
+                    method: 'PUT',
+                    headers: {
+                        "X-CS571-ID": CS571.getBadgerId(),
+                        "Content-Type": "application/json"
+                    },
+                    credentials: "include",
+                    body: JSON.stringify(updatedUser)
+                });
+
+                if (!res.ok) {
+                    alert("Something went wrong while saving your name and age.");
+                    return;
+                }
+
+                setStatusOne(true);
+
+            } catch (err) {
+                console.error("Error saving name/age:", err);
+                alert("Something went wrong. Please try again.");
+            }
         } else {
             alert("Please correct your name/age fields before proceeding.");
         }
     }
 
-    function handleStatusTwo() {
-        // TODO: figure out more sophisticated way to choose body type, height maybe
-        setStatusTwo(true);
+    // updates api after height, weight are set
+    async function handleStatusTwo() {
+        if (!loginId?.loginId) {
+            alert("Login ID missing.");
+            return;
+        }
+
+        try {
+            const userRes = await fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/users`, {
+                headers: {
+                    "X-CS571-ID": CS571.getBadgerId()
+                },
+                credentials: "include"
+            });
+
+            const data = await userRes.json();
+            const og = data.results[loginId.loginId];
+            if (!og) {
+                alert("Failed to find account");
+                return;
+            }
+
+            const updatedUser = {
+                Id: loginId.loginId,
+                Firstname: firstname,
+                Lastname: lastname,
+                Age: age,
+                Height: height,
+                Weight: weight
+            };
+
+            const updateRes = await fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/${loginStatus.username}?id=${loginStatus.usernameId}`, {
+                method: 'PUT',
+                headers: {
+                    "X-CS571-ID": CS571.getBadgerId(),
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify(updatedUser)
+            });
+
+            if (!updateRes.ok) {
+                alert("Something went wrong while updating your profile.");
+                return;
+            }
+
+            console.log("User successfully updated.");
+            navigate("/plan-setup");
+
+        } catch (err) {
+            console.error("Error updating user:", err);
+            alert("Something went wrong. Please try again.");
+        }
     }
 
     return <>
@@ -127,16 +153,9 @@ export default function PostRegistration() {
                         value={weight}
                         onChange={e => setWeight(e.target.value)}
                     />
-                    <Form.Label htmlFor="ageInput">Age</Form.Label>
-                    <Form.Control
-                        id="ageInput"
-                        type="number"
-                        value={age}
-                        onChange={e => setAge(e.target.value)}
-                    />
                     <br />
                     <Button variant="secondary" onClick={() => setStatusOne(false)}>Previous</Button>
-                    <Button style={{ marginLeft: ".5rem" }} onClick={handleStatusTwo}>Next</Button>
+                    <Button style={{ marginLeft: ".5rem" }} onClick={() => handleStatusTwo()}>Next</Button>
                 </Form>
             </> : <>
                 <h3>Let's start by getting to know you!</h3>

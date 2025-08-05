@@ -3,15 +3,18 @@ import LoginStatusContextClassifyt from "../contexts/LoginStatusContextClassifyt
 import LoginUsersId from "../contexts/LoginUsersId";
 import { Button, Form } from "react-bootstrap";
 import { useNavigate } from "react-router";
+import PlanSetup from "../contexts/PlanSetup";
 
 export default function LoginClassifyt() {
 
     const [loginStatus, setLoginStatus] = useContext(LoginStatusContextClassifyt);
     const [loginId, setLoginId] = useContext(LoginUsersId);
+    const [planSetup, setPlanSetup] = useContext(PlanSetup);
 
     const unRef = useRef();
     const pwRef = useRef();
     const [holder, setHolder] = useState(true);
+    const [msg, setMsg] = useState("");
     const [existsAndCorrect, setExistsAndCorrect] = useState(false);
 
     const navigate = useNavigate();
@@ -24,7 +27,7 @@ export default function LoginClassifyt() {
 
         if (!username || !password) {
             setHolder(false);
-            alert("Please enter a username and password!");
+            setMsg("Please enter a username and password!");
             return;
         } else {
             fetch(`https://cs571api.cs.wisc.edu/rest/su25/bucket/users`, {
@@ -33,13 +36,10 @@ export default function LoginClassifyt() {
                 }
             }).then(res => res.json()).then(data => {
                 const users = Object.values(data.results || {});
-                console.log(users, "users");                        //
 
                 if (users.some(u => u.username === username)) {
                     const matchedUser = users.find(u => u.username === username);
-                    console.log(matchedUser);                                      //
                     if (matchedUser.password === password) {
-                        console.log("got into last if");                           //
                         const usersInfo = { username: username, usernameId: matchedUser.id };
                         setLoginStatus(usersInfo);
                         setExistsAndCorrect(true);
@@ -50,22 +50,40 @@ export default function LoginClassifyt() {
                                 "X-CS571-ID": CS571.getBadgerId()
                             }
                         }).then(postRes => postRes.json()).then(postData => {
-                            console.log(postData, "postdata");
-                            console.log(postData.results, ".results");
-                            console.log(postData.results[usersInfo.usernameId], ".usernameId", usersInfo.usernameId);
                             const transmitId = { loginId: postData.results[usersInfo.usernameId].Id };
-                            console.log(transmitId);
                             setLoginId(transmitId);
-                            sessionStorage.setItem("loginId", JSON.stringify({ loginId: transmitId }));
+                            sessionStorage.setItem("loginId", JSON.stringify(transmitId));
                             setExistsAndCorrect(true);
+
+                            const entryData = postData.results[usersInfo.usernameId];
+                            const varPlanSetup = {
+                                Age: entryData.Age ?? 0,
+                                Height: entryData.Height ?? 0,
+                                Weight: entryData.Weight ?? 0,
+                                MaxBench: entryData.MaxBench ?? 0,
+                                MaxPulldown: entryData.MaxPulldown ?? 0,
+                                MaxSquat: entryData.MaxSquat ?? 0,
+                                Muscularity: entryData.Muscularity ?? 0,
+                                Cardio: entryData.Cardio ?? 50,
+                                Strength: entryData.Strength ?? 50,
+                                Athlete: entryData.Athlete ?? 0,
+                                Focus: entryData.Focus ?? "",
+                                Frequency: entryData.Frequency ?? 0,
+                                WorkoutPlan: entryData.WorkoutPlan ?? []
+                            }
+                            setPlanSetup(varPlanSetup);
+                            sessionStorage.setItem("planSetup", JSON.stringify(entryData));
+
                             navigate("/");
                         })
                     } else {
                         setHolder(false);
+                        setMsg("Incorrect username or password!");
                         return;
                     }
                 } else {
                     setHolder(false);
+                    setMsg("No user found with that username!");
                     return;
                 }
             })
@@ -82,7 +100,7 @@ export default function LoginClassifyt() {
                 <h2>Login</h2>
                 <Form onSubmit={handleLoginClick}>
                     <br/>
-                    {!holder && <p style={{ color: 'red' }}>Your username or password is incorrect!</p>}
+                    {!holder && <p style={{ color: 'red' }}>{msg}</p>}
                     <Form.Label htmlFor="usernameInput">Username</Form.Label>
                     <Form.Control ref={unRef} id="usernameInput"/>
                     <br />

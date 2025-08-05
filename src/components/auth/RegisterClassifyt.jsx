@@ -25,8 +25,14 @@ export default function RegisterClassifyt() {
             return;
         }
 
-        if (!/^\d{7}$/.test(password)) {
-            alert("Your password must be a 7-digit number!");
+        // major change from our hws is making pws 8+ characters, must include chars and nums
+        if (password.length < 8) {
+            alert("Your password must be at least 8 characters long!");
+            return;
+        }
+
+        if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/.test(password)) {
+            alert("Password must be at least 8 characters long and include both letters and numbers.");
             return;
         }
 
